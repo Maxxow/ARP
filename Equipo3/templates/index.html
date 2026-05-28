@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARP Spoofing Control Center - Equipo 3</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Hojas de Estilo Custom -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Alerta de Root si no corre con sudo -->
+    {% if not is_root %}
+    <div class="root-banner">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span><strong>¡ADVERTENCIA!</strong> El servidor web no se está ejecutando como administrador (root). Las herramientas de red arpspoof y tcpdump no funcionarán correctamente. Detén la app e iníciala con <code>sudo python3 web_app.py</code>.</span>
+    </div>
+    {% endif %}
+
+    <div class="app-container">
+        <!-- HEADER PRINCIPAL -->
+        <header class="app-header">
+            <div class="header-info">
+                <div class="logo-area">
+                    <i class="fa-solid fa-user-ninja pulse-ninja"></i>
+                    <div>
+                        <h1>ARP SPOOFING CONTROL CENTER</h1>
+                        <p>Plataforma de Intercepción MitM &bull; Laboratorio Ciberseguridad &bull; Equipo 3</p>
+                    </div>
+                </div>
+            </div>
+            <div class="status-indicator-badge idles" id="status-badge">
+                <span class="pulse-dot"></span>
+                <span id="status-text">SISTEMA INACTIVO</span>
+            </div>
+        </header>
+
+        <!-- DASHBOARD GRID -->
+        <main class="dashboard-grid">
+            
+            <!-- PANEL DE CONTROL / CONFIGURACIÓN -->
+            <section class="panel glass-panel" id="config-panel">
+                <div class="panel-header">
+                    <i class="fa-solid fa-sliders"></i>
+                    <h2>Configuración del Ataque</h2>
+                </div>
+                <div class="panel-body">
+                    <form id="attack-form" onsubmit="event.preventDefault();">
+                        <div class="input-group">
+                            <label for="interface-select">
+                                <i class="fa-solid fa-ethernet"></i> Interfaz de Red
+                            </label>
+                            <select id="interface-select" required>
+                                <option value="" disabled selected>Buscando interfaces...</option>
+                            </select>
+                            <span class="input-help">Selecciona la tarjeta activa del laboratorio.</span>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="target-ip">
+                                <i class="fa-solid fa-desktop"></i> IP Víctima (Equipo 1)
+                            </label>
+                            <input type="text" id="target-ip" placeholder="Ej: 192.168.1.100" required>
+                            <span class="input-help">Dispositivo cliente cuyas tablas ARP envenenaremos.</span>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="gateway-ip">
+                                <i class="fa-solid fa-server"></i> IP Servidor (Equipo 2)
+                            </label>
+                            <input type="text" id="gateway-ip" placeholder="Ej: 192.168.1.150" required>
+                            <span class="input-help">Destino de las peticiones HTTP que interceptaremos.</span>
+                        </div>
+
+                        <!-- Estado de Red Interna -->
+                        <div class="network-status-box">
+                            <div class="status-row">
+                                <span><i class="fa-solid fa-route"></i> IP Forwarding:</span>
+                                <span id="ip-forwarding-status" class="badge badge-error">INACTIVO</span>
+                            </div>
+                            <div class="status-row">
+                                <span><i class="fa-solid fa-stopwatch"></i> Tiempo Transcurrido:</span>
+                                <span id="attack-timer" class="mono-timer">00:00:00</span>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="action-buttons">
+                            <button type="submit" id="btn-start" class="btn btn-success">
+                                <i class="fa-solid fa-play"></i> INICIAR ATAQUE
+                            </button>
+                            <button type="button" id="btn-stop" class="btn btn-danger" disabled>
+                                <i class="fa-solid fa-stop"></i> DETENER ATAQUE
+                            </button>
+                            <button type="button" id="btn-flush" class="btn btn-warning">
+                                <i class="fa-solid fa-broom"></i> LIMPIAR CACHÉ ARP
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- CONTENIDO DE DATOS (MÉTRICAS + LIVE LOGS) -->
+            <section class="data-section">
+                
+                <!-- ROW DE TARJETAS DE MÉTRICAS -->
+                <div class="metrics-row">
+                    <div class="metric-card glass-panel border-cyan">
+                        <div class="metric-icon">
+                            <i class="fa-solid fa-arrows-spin"></i>
+                        </div>
+                        <div class="metric-details">
+                            <h3>Ataques ARP Envíados</h3>
+                            <p class="metric-value" id="metric-packets">0</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass-panel border-purple">
+                        <div class="metric-icon">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                        <div class="metric-details">
+                            <h3>Peticiones HTTP Detectadas</h3>
+                            <p class="metric-value" id="metric-requests">0</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card glass-panel border-red" id="card-credentials">
+                        <div class="metric-icon">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                        <div class="metric-details">
+                            <h3>Credenciales Capturadas</h3>
+                            <p class="metric-value alarm-pulse" id="metric-credentials">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONSOLA DE MONITOREO EN TIEMPO REAL -->
+                <div class="console-panel glass-panel">
+                    <div class="console-header">
+                        <div class="console-title">
+                            <i class="fa-solid fa-terminal"></i>
+                            <h2>Consola de Tráfico Interceptado (Puerto 80)</h2>
+                        </div>
+                        <div class="console-controls">
+                            <!-- Filtros -->
+                            <div class="console-filters">
+                                <button class="filter-btn active" data-filter="all">Todo</button>
+                                <button class="filter-btn text-get" data-filter="get">GET</button>
+                                <button class="filter-btn text-post" data-filter="post">POST</button>
+                                <button class="filter-btn text-cred" data-filter="credential">
+                                    <i class="fa-solid fa-key"></i> Credenciales
+                                </button>
+                            </div>
+                            <!-- Acciones consola -->
+                            <div class="console-actions">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="autoscroll-chk" checked>
+                                    <span class="checkmark"></span> Auto-scroll
+                                </label>
+                                <button id="btn-clear-console" title="Limpiar Consola">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- El terminal de logs -->
+                    <div class="console-output" id="console-output">
+                        <div class="console-placeholder">
+                            <i class="fa-solid fa-satellite-dish"></i>
+                            <p>Esperando el inicio del ataque para capturar tráfico en la red...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modal de notificación de limpieza / errores -->
+    <div id="toast" class="toast hidden">
+        <span id="toast-message">Mensaje informativo</span>
+    </div>
+
+    <!-- Scripts del Cliente -->
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
