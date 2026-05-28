@@ -126,6 +126,19 @@ def read_tcpdump_output(process):
             log_type = "credential"
             state.statistics["total_credentials"] += 1
             
+        elif '"text"' in lower_line and '"sender"' in lower_line:
+            # Capturar y extraer remitente y texto del chat
+            sender_match = re.search(r'"sender"\s*:\s*"([^"]+)"', line_str)
+            text_match = re.search(r'"text"\s*:\s*"([^"]+)"', line_str)
+            if sender_match and text_match:
+                sender_val = sender_match.group(1)
+                text_val = text_match.group(1)
+                log_type = "chat_message"
+                line_str = f"[{sender_val.upper()}] 💬 {text_val}"
+                state.statistics["total_credentials"] += 1 # También lo marcamos como captura de interés
+            else:
+                log_type = "chat_message"
+            
         else:
             # Omitir líneas demasiado cortas o ruido innecesario
             if len(line_str) < 8:

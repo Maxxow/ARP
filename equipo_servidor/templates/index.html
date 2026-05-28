@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor de Pruebas - Chat HTTP Seguro</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <!-- FontAwesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #3b82f6;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --muted-text: #94a3b8;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2rem;
+            max-width: 1100px;
+            width: 95%;
+            margin: 24px auto;
+            padding: 2.5rem;
+            background-color: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Columna de Información del Servidor */
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-right: 1px solid var(--border-color);
+            padding-right: 2rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            align-self: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            50% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        }
+
+        h1 {
+            font-size: 2.3rem;
+            margin: 0 0 1rem 0;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        p {
+            color: var(--muted-text);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: auto;
+        }
+
+        .info-card {
+            background-color: rgba(255, 255, 255, 0.015);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted-text);
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Columna de Chat Interactiva */
+        .chat-panel {
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            height: 480px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .chat-header i {
+            color: var(--accent-color);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            opacity: 0.4;
+            gap: 10px;
+        }
+
+        .chat-placeholder i {
+            font-size: 2.5rem;
+        }
+
+        /* Globos de Mensaje */
+        .msg-bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            line-height: 1.4;
+            font-size: 0.9rem;
+            position: relative;
+            animation: slide-up 0.2s ease;
+        }
+
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-client {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+        .msg-server {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .msg-header {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .msg-client .msg-header { color: var(--accent-color); }
+        .msg-server .msg-header { color: #c084fc; }
+
+        .msg-time {
+            font-weight: normal;
+            opacity: 0.6;
+        }
+
+        /* Contenedor del Input */
+        .chat-input-area {
+            background-color: rgba(15, 23, 42, 0.6);
+            border-top: 1px solid var(--border-color);
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-area input {
+            flex-grow: 1;
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input-area input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .chat-input-area button {
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            width: 42px;
+            height: 42px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            transition: opacity 0.3s ease, transform 0.2s ease;
+        }
+
+        .chat-input-area button:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.15);
+            text-align: center;
+            grid-column: span 2;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .info-panel {
+                border-right: none;
+                padding-right: 0;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- COLUMNA DE INFORMACIÓN -->
+        <div class="info-panel">
+            <div>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    Servidor de Chat Activo
+                </div>
+                <h1>Bienvenido al Servidor</h1>
+                <p>Este portal simula un servicio de mensajería bidireccional no cifrado (HTTP en texto plano) diseñado para analizar la intercepción de tramas ARP MitM.</p>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-label">Puerto</div>
+                    <div class="info-value" style="font-family: 'JetBrains Mono', monospace; color: var(--accent-color);">80 (HTTP)</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Seguridad</div>
+                    <div class="info-value" style="color: var(--danger-color);"><i class="fa-solid fa-unlock"></i> Sin Cifrado</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DE CHAT -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <i class="fa-solid fa-comments"></i>
+                <span>Sala de Mensajería HTTP (Servidor)</span>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-placeholder" id="chat-placeholder">
+                    <i class="fa-solid fa-comments-ascii"></i>
+                    <p>Esperando mensajes del Cliente...</p>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje de respuesta..." autocomplete="off">
+                <button id="chat-send-btn" title="Enviar Mensaje">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PIE DE PÁGINA -->
+        <div class="footer">
+            Entorno de Laboratorio Controlado • Simulación de Tráfico Plaintext
+        </div>
+    </div>
+
+    <!-- Script de Chat Dinámico -->
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatPlaceholder = document.getElementById('chat-placeholder');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send-btn');
+
+        let messageCount = 0;
+
+        // Bucle de consulta de mensajes cada 800ms
+        setInterval(fetchMessages, 800);
+        fetchMessages();
+
+        // Enviar mensaje al hacer clic en el botón o presionar Enter
+        chatSendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function fetchMessages() {
+            try {
+                const response = await fetch('/api/messages');
+                const data = await response.json();
+                
+                if (data.count > messageCount) {
+                    messageCount = data.count;
+                    renderMessages(data.messages);
+                }
+            } catch (err) {
+                console.error("Error al obtener mensajes:", err);
+            }
+        }
+
+        function renderMessages(messagesList) {
+            // Eliminar placeholder
+            if (chatPlaceholder) {
+                chatPlaceholder.style.display = 'none';
+            }
+            
+            chatMessages.innerHTML = '';
+            
+            messagesList.forEach(msg => {
+                const isServer = msg.sender === 'Servidor';
+                const bubble = document.createElement('div');
+                bubble.className = `msg-bubble ${isServer ? 'msg-server' : 'msg-client'}`;
+                
+                bubble.innerHTML = `
+                    <div class="msg-header">
+                        <span>${isServer ? 'Servidor (Tú)' : 'Cliente'}</span>
+                        <span class="msg-time">${msg.timestamp}</span>
+                    </div>
+                    <div>${escapeHTML(msg.text)}</div>
+                `;
+                chatMessages.appendChild(bubble);
+            });
+            
+            // Scroll automático al fondo
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            chatInput.value = '';
+            
+            try {
+                const response = await fetch('/api/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sender: "Servidor",
+                        text: text
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    fetchMessages();
+                }
+            } catch (err) {
+                console.error("Error al enviar mensaje:", err);
+            }
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>

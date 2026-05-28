@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipo 1 - Cliente de Mensajería HTTP</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <!-- FontAwesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #10b981;
+            --accent-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --muted-text: #94a3b8;
+            --danger-color: #ef4444;
+            --border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2rem;
+            max-width: 1100px;
+            width: 95%;
+            margin: 24px auto;
+            padding: 2.5rem;
+            background-color: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Columna de Configuración del Cliente */
+        .config-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-right: 1px solid var(--border-color);
+            padding-right: 2rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--accent-color);
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            align-self: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        h1 {
+            font-size: 2.3rem;
+            margin: 0 0 1rem 0;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        p {
+            color: var(--muted-text);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        /* Formulario IP */
+        .ip-config-form {
+            background-color: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--muted-text);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-label i {
+            color: var(--accent-color);
+        }
+
+        .form-input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-input-row input {
+            flex-grow: 1;
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .form-input-row input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .form-input-row button {
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            padding: 0 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: opacity 0.3s ease;
+        }
+
+        .form-input-row button:hover {
+            opacity: 0.9;
+        }
+
+        .server-status-card {
+            background-color: rgba(255, 255, 255, 0.015);
+            padding: 12px 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .server-status-card span:last-child {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        /* Columna de Chat Interactiva */
+        .chat-panel {
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            height: 480px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .chat-header i {
+            color: var(--accent-color);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--muted-text);
+            opacity: 0.4;
+            gap: 10px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .chat-placeholder i {
+            font-size: 2.5rem;
+        }
+
+        /* Globos de Mensaje */
+        .msg-bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            line-height: 1.4;
+            font-size: 0.9rem;
+            position: relative;
+            animation: slide-up 0.2s ease;
+        }
+
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-client {
+            background: linear-gradient(135deg, #10b981, #047857);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .msg-server {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+        .msg-header {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .msg-client .msg-header { color: #a7f3d0; }
+        .msg-server .msg-header { color: #3b82f6; }
+
+        .msg-time {
+            font-weight: normal;
+            opacity: 0.6;
+        }
+
+        /* Contenedor del Input */
+        .chat-input-area {
+            background-color: rgba(15, 23, 42, 0.6);
+            border-top: 1px solid var(--border-color);
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-area input {
+            flex-grow: 1;
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input-area input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .chat-input-area button {
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            width: 42px;
+            height: 42px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            transition: opacity 0.3s ease, transform 0.2s ease;
+        }
+
+        .chat-input-area button:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        /* Toast de Alerta */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 2000;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .toast.hidden {
+            transform: translateY(100px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.15);
+            text-align: center;
+            grid-column: span 2;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .config-panel {
+                border-right: none;
+                padding-right: 0;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- COLUMNA DE CONFIGURACIÓN -->
+        <div class="config-panel">
+            <div>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    Panel de Víctima (Cliente)
+                </div>
+                <h1>Víctima Interactiva</h1>
+                <p>Usa este chat para enviar mensajes sensibles al Servidor. Las conversaciones viajan por HTTP no cifrado y serán interceptadas por el Atacante.</p>
+                
+                <!-- Input IP del Servidor -->
+                <div class="ip-config-form">
+                    <div class="form-label">
+                        <i class="fa-solid fa-server"></i> IP del Servidor de Pruebas
+                    </div>
+                    <div class="form-input-row">
+                        <input type="text" id="server-ip-input" placeholder="Ej: 192.168.1.150">
+                        <button id="save-ip-btn">Establecer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="server-status-card">
+                <span><i class="fa-solid fa-link"></i> Enlace Servidor:</span>
+                <span id="server-ip-status" style="color: var(--danger-color);">No Configurado</span>
+            </div>
+        </div>
+
+        <!-- COLUMNA DE CHAT -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <i class="fa-solid fa-message"></i>
+                <span>Sala de Mensajería HTTP (Cliente)</span>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-placeholder" id="chat-placeholder">
+                    <i class="fa-solid fa-comments"></i>
+                    <p>Por favor, configura la IP del Servidor a la izquierda para conectar la sala.</p>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje en texto plano..." autocomplete="off" disabled>
+                <button id="chat-send-btn" title="Enviar Mensaje" disabled>
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PIE DE PÁGINA -->
+        <div class="footer">
+            Entorno de Laboratorio Controlado • Simulación de Tráfico Plaintext
+        </div>
+    </div>
+
+    <!-- Toast Slider -->
+    <div id="toast" class="toast hidden">
+        <span id="toast-message">Mensaje informativo</span>
+    </div>
+
+    <!-- Script de Chat Dinámico -->
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatPlaceholder = document.getElementById('chat-placeholder');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send-btn');
+        
+        const serverIpInput = document.getElementById('server-ip-input');
+        const saveIpBtn = document.getElementById('save-ip-btn');
+        const serverIpStatus = document.getElementById('server-ip-status');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+
+        let serverIp = "";
+        let messageCount = 0;
+        let pollingIntervalId = null;
+
+        // Cargar configuración inicial
+        loadConfig();
+
+        saveIpBtn.addEventListener('click', saveConfig);
+        chatSendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                
+                if (data.server_ip) {
+                    serverIp = data.server_ip;
+                    serverIpInput.value = serverIp;
+                    serverIpStatus.textContent = serverIp;
+                    serverIpStatus.style.color = 'var(--accent-color)';
+                    
+                    // Activar inputs del chat
+                    chatInput.disabled = false;
+                    chatSendBtn.disabled = false;
+                    
+                    // Iniciar polling
+                    if (pollingIntervalId) clearInterval(pollingIntervalId);
+                    pollingIntervalId = setInterval(fetchMessages, 800);
+                    fetchMessages();
+                }
+            } catch (err) {
+                console.error("Error al cargar configuración:", err);
+            }
+        }
+
+        async function saveConfig() {
+            const ip = serverIpInput.value.trim();
+            if (!ip) {
+                showToast("⚠️ Por favor, escribe una dirección IP válida.");
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ server_ip: ip })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast("✅ Servidor de destino configurado correctamente.");
+                    loadConfig();
+                } else {
+                    showToast("❌ Error al guardar configuración.");
+                }
+            } catch (err) {
+                showToast("❌ Error de red.");
+            }
+        }
+
+        async function fetchMessages() {
+            if (!serverIp) return;
+            try {
+                const response = await fetch('/api/messages');
+                const data = await response.json();
+                
+                if (data.messages && data.messages.length > messageCount) {
+                    messageCount = data.messages.length;
+                    renderMessages(data.messages);
+                }
+            } catch (err) {
+                console.error("Error al consultar mensajes:", err);
+            }
+        }
+
+        function renderMessages(messagesList) {
+            if (chatPlaceholder) {
+                chatPlaceholder.style.display = 'none';
+            }
+            
+            chatMessages.innerHTML = '';
+            
+            messagesList.forEach(msg => {
+                const isClient = msg.sender === 'Cliente';
+                const bubble = document.createElement('div');
+                bubble.className = `msg-bubble ${isClient ? 'msg-client' : 'msg-server'}`;
+                
+                bubble.innerHTML = `
+                    <div class="msg-header">
+                        <span>${isClient ? 'Cliente (Tú)' : 'Servidor'}</span>
+                        <span class="msg-time">${msg.timestamp}</span>
+                    </div>
+                    <div>${escapeHTML(msg.text)}</div>
+                `;
+                chatMessages.appendChild(bubble);
+            });
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            chatInput.value = '';
+            
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    fetchMessages();
+                } else {
+                    showToast(`❌ Error: ${data.error}`);
+                }
+            } catch (err) {
+                showToast("❌ Error de red al enviar el mensaje.");
+            }
+        }
+
+        function showToast(message) {
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>

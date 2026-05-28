@@ -523,6 +523,11 @@ code {
     color: var(--accent-red);
 }
 
+.filter-btn.active.text-chat {
+    border-bottom: 2px solid var(--accent-purple);
+    color: #e9d5ff;
+}
+
 /* Controles extras consola */
 .console-actions {
     display: flex;
@@ -701,6 +706,22 @@ code {
 .log-credential .log-content { 
     color: #fca5a5;
     font-weight: bold;
+}
+
+.log-chat_message {
+    border-left-color: var(--accent-purple);
+    background-color: rgba(168, 85, 247, 0.08);
+    box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.1);
+    animation: pulse-purple-row 3s infinite;
+}
+.log-chat_message .log-content {
+    color: #e9d5ff;
+    font-weight: 500;
+}
+
+@keyframes pulse-purple-row {
+    0%, 100% { background-color: rgba(168, 85, 247, 0.08); }
+    50% { background-color: rgba(168, 85, 247, 0.16); }
 }
 
 /* Toast Notificaciones */

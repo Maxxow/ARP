@@ -340,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (log.type === 'post') iconHtml = '<i class="fa-solid fa-cloud-arrow-up"></i> POST ';
         else if (log.type === 'credential') iconHtml = '🔑 ¡CREDENCIAL DETECTADA! ';
         else if (log.type === 'response') iconHtml = '✅ ';
+        else if (log.type === 'chat_message') iconHtml = '💬 CHAT INTERCEPTADO: ';
         
         // Crear estructura interna
         logDiv.innerHTML = `
